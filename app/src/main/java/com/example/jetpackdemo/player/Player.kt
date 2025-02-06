@@ -3,13 +3,12 @@ package com.example.jetpackdemo.player
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.pm.ActivityInfo
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
-import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.SeekBar
 import android.widget.TextView
+import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.aspectRatio
@@ -31,6 +30,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
@@ -39,6 +39,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.PlayerView
 import com.airbnb.lottie.LottieAnimationView
 import com.example.jetpackdemo.R
@@ -47,29 +48,30 @@ import kotlinx.coroutines.delay
 @SuppressLint("SourceLockedOrientationActivity")
 @OptIn(UnstableApi::class)
 @Composable
-fun Player(mediaUri: String, autoPlay: Boolean = false) {
+fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
     val context = LocalContext.current
     val activity = context as Activity
     val lifecycleOwner = LocalLifecycleOwner.current
     val insetsController =
         remember { WindowInsetsControllerCompat(activity.window, activity.window.decorView) }
+    val dataSourceFactory = remember {
+        val httpDataSource = DefaultHttpDataSource.Factory()
+        ResolvingDataSource.Factory(httpDataSource) { dataSpec ->
+            val link = dataSpec.uri.toString()
+            if (link.endsWith(".ts")) {
+                val fileName = link.substringAfterLast("/")
+                dataSpec.withUri("$mediaUri/$fileName".toUri())
+            } else {
+                dataSpec
+            }
+        }
+    }
     val exoPlayer = remember(mediaUri) {
         ExoPlayer.Builder(context).build().apply {
             val mediaItem = MediaItem.Builder()
                 .setUri(mediaUri)
                 .setMimeType(MimeTypes.APPLICATION_M3U8)
                 .build()
-
-            val httpDataSource = DefaultHttpDataSource.Factory()
-            val dataSourceFactory = ResolvingDataSource.Factory(httpDataSource) { dataSpec ->
-                val link = dataSpec.uri.toString()
-                if (link.endsWith(".ts")) {
-                    val fileName = link.substringAfterLast("/")
-                    dataSpec.withUri("$mediaUri/$fileName".toUri())
-                } else {
-                    dataSpec
-                }
-            }
             val mediaSource =
                 DefaultMediaSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
             setMediaSource(mediaSource)
@@ -80,19 +82,45 @@ fun Player(mediaUri: String, autoPlay: Boolean = false) {
     var isLandScreen by remember { mutableStateOf(false) }
     var isSeeking by remember { mutableStateOf(false) }
 
-    DisposableEffect(exoPlayer) {
-        onDispose {
-            exoPlayer.release()
-        }
+    fun play() {
+        val playButton = activity.findViewById<ImageView>(R.id.playButton)
+        exoPlayer.play()
+        playButton.setImageResource(R.drawable.round_pause_24)
+    }
+
+    fun pause() {
+        val playButton = activity.findViewById<ImageView>(R.id.playButton)
+        exoPlayer.pause()
+        playButton.setImageResource(R.drawable.round_play_arrow_24)
+    }
+
+    fun enterFullscreen() {
+        val fullscreenButton = activity.findViewById<ImageView>(R.id.fullscreenButton)
+        val exoTitle = activity.findViewById<TextView>(R.id.exo_title)
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        insetsController.hide(WindowInsetsCompat.Type.systemBars())
+        fullscreenButton.setImageResource(R.drawable.baseline_fullscreen_exit_24)
+        exoTitle.visibility = View.VISIBLE
+        isLandScreen = true
+    }
+
+    fun exitFullscreen() {
+        val fullscreenButton = activity.findViewById<ImageView>(R.id.fullscreenButton)
+        val exoTitle = activity.findViewById<TextView>(R.id.exo_title)
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        insetsController.show(WindowInsetsCompat.Type.systemBars())
+        fullscreenButton.setImageResource(R.drawable.baseline_fullscreen_24)
+        exoTitle.visibility = View.GONE
+        isLandScreen = false
     }
 
     LaunchedEffect(exoPlayer) {
         while (true) {
             if (!isSeeking && exoPlayer.isPlaying) {
                 // 更新 UI
-                val seekBar: SeekBar = activity.findViewById(R.id.seekBar)
-                val currentPosition: TextView = activity.findViewById(R.id.currentPosition)
-                seekBar.progress = (exoPlayer.currentPosition * 100 / exoPlayer.duration).toInt()
+                val seekBar = activity.findViewById<SeekBar>(R.id.seekBar)
+                val currentPosition = activity.findViewById<TextView>(R.id.currentPosition)
+                seekBar.progress = exoPlayer.currentPosition.toInt()
                 currentPosition.text = formatTime(exoPlayer.currentPosition)
             }
             delay(1000) // 每秒更新一次
@@ -106,7 +134,8 @@ fun Player(mediaUri: String, autoPlay: Boolean = false) {
             }
 
             override fun onResume(owner: LifecycleOwner) {
-//                exoPlayer.playWhenReady = true
+                exoPlayer.playWhenReady = true
+                play()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -115,88 +144,131 @@ fun Player(mediaUri: String, autoPlay: Boolean = false) {
         }
     }
 
+    DisposableEffect(exoPlayer) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
     AndroidView(
         factory = { ctx ->
-            val rootView = LayoutInflater.from(ctx).inflate(R.layout.exo_player, null, false)
-            val playerView = rootView.findViewById<PlayerView>(R.id.playerView)
-            playerView.player = exoPlayer
-
-            // 绑定控制器功能
-            val playButton = playerView.findViewById<ImageView>(R.id.playButton)
-            playButton.setOnClickListener {
-                Log.i("@@", "点击了")
-                if (exoPlayer.isPlaying) {
-                    exoPlayer.pause()
-                    playButton.setImageResource(R.drawable.round_play_arrow_24)
-                } else {
-                    exoPlayer.play()
-                    playButton.setImageResource(R.drawable.round_pause_24)
-                }
+            val inflater = LayoutInflater.from(ctx)
+            val rootView = inflater.inflate(R.layout.exo_player, null, false)
+            val playerView = rootView.findViewById<PlayerView>(R.id.playerView).apply {
+                player = exoPlayer
             }
 
-            val fullscreenButton = playerView.findViewById<ImageView>(R.id.fullscreenButton)
-            fullscreenButton.setOnClickListener {
-                if (isLandScreen) {
-                    activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-                    insetsController.show(WindowInsetsCompat.Type.statusBars())
-                    fullscreenButton.setImageResource(R.drawable.baseline_fullscreen_24)
-                } else {
-                    activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
-                    insetsController.hide(WindowInsetsCompat.Type.statusBars())
-                    fullscreenButton.setImageResource(R.drawable.baseline_fullscreen_exit_24)
-                }
-                isLandScreen = !isLandScreen
-            }
+            with(rootView) {
+                val exoTitle = findViewById<TextView>(R.id.exo_title)
+                val playButton = findViewById<ImageView>(R.id.playButton)
+                val fullscreenButton = findViewById<ImageView>(R.id.fullscreenButton)
+                val backButton = findViewById<ImageView>(R.id.backButton)
+                val seekBar = findViewById<SeekBar>(R.id.seekBar)
+                val currentPosition = findViewById<TextView>(R.id.currentPosition)
+                val duration = findViewById<TextView>(R.id.duration)
+                val loadingIcon = findViewById<LottieAnimationView>(R.id.loadingIcon)
 
-            val backButton = playerView.findViewById<ImageView>(R.id.backButton)
-            backButton.setOnClickListener {}
+                exoTitle.text = title
 
-            val seekBar = playerView.findViewById<SeekBar>(R.id.seekBar)
-            seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar, progress: Int, fromUser: Boolean) {
-                    if (fromUser) exoPlayer.seekTo((progress * exoPlayer.duration / 100))
-                }
-
-                override fun onStartTrackingTouch(seekBar: SeekBar) {
-                    isSeeking = true
-                }
-
-                override fun onStopTrackingTouch(seekBar: SeekBar) {
-                    isSeeking = false
-                }
-            })
-
-            // 监听播放状态更新总时长
-            exoPlayer.addListener(object : Player.Listener {
-                override fun onPlaybackStateChanged(state: Int) {
-                    val loadingIcon = rootView.findViewById<LottieAnimationView>(R.id.loadingIcon)
-                    val duration = playerView.findViewById<TextView>(R.id.duration)
-                    when (state) {
-                        Player.STATE_BUFFERING -> loadingIcon.visibility = View.VISIBLE
-                        Player.STATE_ENDED, Player.STATE_IDLE -> loadingIcon.visibility = View.GONE
-                        Player.STATE_READY -> {
-                            duration.text = formatTime(exoPlayer.duration)
-                            seekBar.max = 100
-                            loadingIcon.visibility = View.GONE
+                // 播放按钮点击事件
+                playButton.setOnClickListener {
+                    if (exoPlayer.duration != C.TIME_UNSET && exoPlayer.currentPosition < exoPlayer.duration) {
+                        if (exoPlayer.isPlaying) {
+                            pause()
+                        } else {
+                            play()
                         }
                     }
                 }
 
-                override fun onIsLoadingChanged(isLoading: Boolean) {
-                    seekBar.secondaryProgress =
-                        (exoPlayer.bufferedPosition * 100 / exoPlayer.duration).toInt()
+                // 全屏按钮点击事件
+                fullscreenButton.setOnClickListener {
+                    if (isLandScreen) {
+                        exitFullscreen()
+                    } else {
+                        enterFullscreen()
+                    }
                 }
-            })
+
+                // 返回按钮点击事件
+                backButton.setOnClickListener {
+                    if (isLandScreen) {
+                        exitFullscreen()
+                    }
+                }
+
+                // SeekBar事件监听
+                seekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(
+                        seekBar: SeekBar,
+                        progress: Int,
+                        fromUser: Boolean
+                    ) {
+                        if (fromUser) {
+                            currentPosition.text = formatTime(progress.toLong())
+                        }
+                    }
+
+                    override fun onStartTrackingTouch(seekBar: SeekBar) {
+                        playerView.controllerShowTimeoutMs = 0
+                        isSeeking = true
+                    }
+
+                    override fun onStopTrackingTouch(seekBar: SeekBar) {
+                        exoPlayer.seekTo(seekBar.progress.toLong())
+                        isSeeking = false
+                        playerView.controllerShowTimeoutMs =
+                            PlayerControlView.DEFAULT_SHOW_TIMEOUT_MS
+                    }
+                })
+
+                // ExoPlayer监听器
+                exoPlayer.addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(state: Int) {
+                        when (state) {
+                            Player.STATE_BUFFERING -> loadingIcon.visibility = View.VISIBLE
+
+                            Player.STATE_READY -> {
+                                // 更新总时长和SeekBar最大值
+                                if (exoPlayer.duration != C.TIME_UNSET) {
+                                    duration.text = formatTime(exoPlayer.duration)
+                                    seekBar.max = exoPlayer.duration.toInt()
+                                }
+                                loadingIcon.visibility = View.GONE
+                            }
+
+                            Player.STATE_ENDED -> {
+                                loadingIcon.visibility = View.GONE
+                                pause()
+                            }
+
+                            Player.STATE_IDLE -> loadingIcon.visibility = View.GONE
+                        }
+                    }
+
+                    override fun onIsLoadingChanged(isLoading: Boolean) {
+                        // 更新缓冲进度
+                        seekBar.secondaryProgress = exoPlayer.bufferedPosition.toInt()
+                    }
+                })
+            }
+
             rootView
         },
         modifier = Modifier
             .background(Color.Black)
             .then(if (isLandScreen) Modifier.fillMaxSize() else Modifier.aspectRatio(16 / 9f)),
         update = { rootView ->
-            val playerView: PlayerView = rootView.findViewById(R.id.playerView)
-            playerView.player = exoPlayer
+            val playerView = rootView.findViewById<PlayerView>(R.id.playerView)
+            if (playerView.player != exoPlayer) {
+                playerView.player = exoPlayer
+            }
         }
     )
+
+    BackHandler(isLandScreen) {
+        exitFullscreen()
+    }
 }
 
 // 时间格式化工具

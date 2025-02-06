@@ -41,7 +41,7 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .systemBarsPadding()
                 ) {
-                    Player(mediaUri = url)
+                    Player(mediaUri = url, title = "Stay MV 影视")
                 }
             }
         }
@@ -55,10 +55,12 @@ class MainActivity : ComponentActivity() {
         when (nightMode) {
             Configuration.UI_MODE_NIGHT_YES -> {
                 insetsControllerCompat.isAppearanceLightStatusBars = false
+                insetsControllerCompat.isAppearanceLightNavigationBars = false
             }
 
             Configuration.UI_MODE_NIGHT_NO -> {
                 insetsControllerCompat.isAppearanceLightStatusBars = true
+                insetsControllerCompat.isAppearanceLightNavigationBars = true
             }
 
             else -> {}

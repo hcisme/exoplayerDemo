@@ -1,28 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- 背景轨道 -->
-    <item android:id="@android:id/background">
+    <!--     进度条的背景色-->
+    <item android:id="@android:id/background"
+        android:gravity="center_vertical|fill_horizontal">
         <shape android:shape="rectangle">
-            <corners android:radius="4dp"/>
-            <solid android:color="#FFFFFF"/> <!-- 轨道背景色 -->
+            <size android:height="4dp" />
+            <corners android:radius="5dp" />
+            <solid android:color="#FFFFFF" />
         </shape>
     </item>
 
-    <!-- 缓冲进度 -->
-    <item android:id="@android:id/secondaryProgress">
+    <!--    缓冲进度条的背景色-->
+    <item android:id="@android:id/secondaryProgress"
+        android:gravity="center_vertical|fill_horizontal">
         <scale android:scaleWidth="100%">
             <shape android:shape="rectangle">
-                <corners android:radius="4dp"/>
-                <solid android:color="#66FFFFFF"/> <!-- 缓冲区域颜色 -->
+                <size android:height="4dp" />
+                <corners android:radius="5dp" />
+                <solid android:color="#662196F3" />
             </shape>
         </scale>
     </item>
 
-    <!-- 播放进度 -->
-    <item android:id="@android:id/progress">
+    <!--  进度条的背景色-->
+    <item android:id="@android:id/progress"
+        android:gravity="center_vertical|fill_horizontal">
         <scale android:scaleWidth="100%">
             <shape android:shape="rectangle">
-                <corners android:radius="4dp"/>
-                <solid android:color="#2196F3"/> <!-- 播放进度颜色 -->
+                <size android:height="4dp" />
+                <corners android:radius="5dp" />
+                <solid android:color="#2196F3"/>
             </shape>
         </scale>
     </item>
