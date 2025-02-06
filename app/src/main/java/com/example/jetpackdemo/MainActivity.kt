@@ -9,9 +9,17 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowInsetsControllerCompat
@@ -19,7 +27,8 @@ import com.example.jetpackdemo.player.Player
 import com.example.jetpackdemo.ui.theme.JetpackDemoTheme
 
 class MainActivity : ComponentActivity() {
-    private val url = "https://chcblogs.com/api/web/file/videoResource/2ulOGuLjR58NBF57Fj8U"
+    private val url1 = "https://chcblogs.com/api/web/file/videoResource/2ulOGuLjR58NBF57Fj8U"
+    private val url2 = "https://chcblogs.com/api/web/file/videoResource/WFFLQ1r5QTmZzmhiAoNn"
 
     @SuppressLint("SourceLockedOrientationActivity")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -35,13 +44,35 @@ class MainActivity : ComponentActivity() {
             JetpackDemoTheme(
                 dynamicColor = false
             ) {
+                var currentUrl by remember { mutableStateOf(url1) }
+
                 Box(
                     modifier = Modifier
                         .background(MaterialTheme.colorScheme.background)
                         .fillMaxSize()
                         .systemBarsPadding()
                 ) {
-                    Player(mediaUri = url, title = "Stay MV 影视")
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        Player(
+                            mediaUri = currentUrl,
+                            title = if (currentUrl == url1) "Stay MV 影视" else "肖申克的救赎 高清"
+                        )
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Button(
+                                onClick = {
+                                    currentUrl = if (currentUrl == url1) url2 else url1
+                                }
+                            ) {
+                                Text("切换视频")
+                            }
+                        }
+                    }
+
                 }
             }
         }
@@ -54,13 +85,17 @@ class MainActivity : ComponentActivity() {
 
         when (nightMode) {
             Configuration.UI_MODE_NIGHT_YES -> {
-                insetsControllerCompat.isAppearanceLightStatusBars = false
-                insetsControllerCompat.isAppearanceLightNavigationBars = false
+                insetsControllerCompat.apply {
+                    isAppearanceLightStatusBars = false
+                    isAppearanceLightNavigationBars = false
+                }
             }
 
             Configuration.UI_MODE_NIGHT_NO -> {
-                insetsControllerCompat.isAppearanceLightStatusBars = true
-                insetsControllerCompat.isAppearanceLightNavigationBars = true
+                insetsControllerCompat.apply {
+                    isAppearanceLightStatusBars = true
+                    isAppearanceLightNavigationBars = true
+                }
             }
 
             else -> {}

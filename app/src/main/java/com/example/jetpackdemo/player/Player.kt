@@ -54,31 +54,8 @@ fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
     val lifecycleOwner = LocalLifecycleOwner.current
     val insetsController =
         remember { WindowInsetsControllerCompat(activity.window, activity.window.decorView) }
-    val dataSourceFactory = remember {
-        val httpDataSource = DefaultHttpDataSource.Factory()
-        ResolvingDataSource.Factory(httpDataSource) { dataSpec ->
-            val link = dataSpec.uri.toString()
-            if (link.endsWith(".ts")) {
-                val fileName = link.substringAfterLast("/")
-                dataSpec.withUri("$mediaUri/$fileName".toUri())
-            } else {
-                dataSpec
-            }
-        }
-    }
-    val exoPlayer = remember(mediaUri) {
-        ExoPlayer.Builder(context).build().apply {
-            val mediaItem = MediaItem.Builder()
-                .setUri(mediaUri)
-                .setMimeType(MimeTypes.APPLICATION_M3U8)
-                .build()
-            val mediaSource =
-                DefaultMediaSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
-            setMediaSource(mediaSource)
-            prepare()
-            playWhenReady = autoPlay
-        }
-    }
+    var firstLoad = remember { true }
+    val exoPlayer = remember { ExoPlayer.Builder(context).build() }
     var isLandScreen by remember { mutableStateOf(false) }
     var isSeeking by remember { mutableStateOf(false) }
 
@@ -114,6 +91,30 @@ fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
         isLandScreen = false
     }
 
+    LaunchedEffect(mediaUri) {
+        val mediaItem = MediaItem.Builder()
+            .setUri(mediaUri)
+            .setMimeType(MimeTypes.APPLICATION_M3U8)
+            .build()
+
+        val httpDataSource = DefaultHttpDataSource.Factory()
+        val dataSourceFactory = ResolvingDataSource.Factory(httpDataSource) { dataSpec ->
+            val link = dataSpec.uri.toString()
+            if (link.endsWith(".ts")) {
+                val fileName = link.substringAfterLast("/")
+                dataSpec.withUri("$mediaUri/$fileName".toUri())
+            } else {
+                dataSpec
+            }
+        }
+
+        val mediaSource = DefaultMediaSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
+
+        exoPlayer.setMediaSource(mediaSource)
+        exoPlayer.prepare()
+        exoPlayer.playWhenReady = autoPlay
+    }
+
     LaunchedEffect(exoPlayer) {
         while (true) {
             if (!isSeeking && exoPlayer.isPlaying) {
@@ -130,12 +131,15 @@ fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
     DisposableEffect(exoPlayer, lifecycleOwner) {
         val observer = object : DefaultLifecycleObserver {
             override fun onPause(owner: LifecycleOwner) {
-                exoPlayer.pause()
+                pause()
             }
 
             override fun onResume(owner: LifecycleOwner) {
-                exoPlayer.playWhenReady = true
-                play()
+                if (!firstLoad) {
+                    play()
+                } else {
+                    firstLoad = false
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
