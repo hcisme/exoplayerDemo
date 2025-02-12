@@ -1,4 +1,4 @@
-package com.example.jetpackdemo.ui.theme
+package com.example.exoplayerdemo.ui.theme
 
 import android.app.Activity
 import android.os.Build

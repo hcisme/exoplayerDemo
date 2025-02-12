@@ -5,17 +5,46 @@
     android:layout_height="match_parent"
     android:background="#000000">
 
+    <!--    app:controller_layout_id="@layout/custom_player_controller"-->
+
     <androidx.media3.ui.PlayerView
         android:id="@+id/playerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:background="#000000"
-        app:controller_layout_id="@layout/custom_player_controller"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:use_controller="false" />
+
+    <androidx.media3.ui.PlayerControlView
+        android:id="@+id/playerControlView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:animation_enabled="true"
+        app:controller_layout_id="@layout/custom_player_controller"
+        app:layout_constraintBottom_toBottomOf="@+id/playerView"
+        app:layout_constraintEnd_toEndOf="@+id/playerView"
+        app:layout_constraintStart_toStartOf="@+id/playerView"
+        app:layout_constraintTop_toTopOf="@+id/playerView"
         app:use_controller="true" />
+
+    <FrameLayout
+        android:id="@+id/danmuContainer"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHeight_percent="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@+id/playerView">
+
+        <com.example.exoplayerdemo.view.DanmuView
+            android:id="@+id/danmuView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </FrameLayout>
 
     <com.airbnb.lottie.LottieAnimationView
         android:id="@+id/loadingIcon"

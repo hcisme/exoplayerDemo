@@ -21,5 +21,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "jetpackDemo"
+rootProject.name = "exoplayerDemo"
 include(":app")

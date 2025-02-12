@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.jetpackdemo"
+    namespace = "com.example.exoplayerdemo"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.jetpackdemo"
+        applicationId = "com.example.exoplayerdemo"
         minSdk = 21
         targetSdk = 35
         versionCode = 1
@@ -20,7 +20,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

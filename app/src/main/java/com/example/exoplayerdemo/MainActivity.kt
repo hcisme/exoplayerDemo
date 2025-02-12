@@ -1,4 +1,4 @@
-package com.example.jetpackdemo
+package com.example.exoplayerdemo
 
 import android.annotation.SuppressLint
 import android.content.pm.ActivityInfo
@@ -23,11 +23,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowInsetsControllerCompat
-import com.example.jetpackdemo.player.Player
-import com.example.jetpackdemo.ui.theme.JetpackDemoTheme
+import com.example.exoplayerdemo.player.Player
+import com.example.exoplayerdemo.ui.theme.JetpackDemoTheme
 
 class MainActivity : ComponentActivity() {
-    private val url1 = "https://chcblogs.com/api/web/file/videoResource/2ulOGuLjR58NBF57Fj8U"
+    private val url1 = "https://chcblogs.com/api/web/file/videoResource/ZbpMBzY1AECJnWvGkXZN"
     private val url2 = "https://chcblogs.com/api/web/file/videoResource/WFFLQ1r5QTmZzmhiAoNn"
 
     @SuppressLint("SourceLockedOrientationActivity")
@@ -55,7 +55,7 @@ class MainActivity : ComponentActivity() {
                     Column(modifier = Modifier.fillMaxSize()) {
                         Player(
                             mediaUri = currentUrl,
-                            title = if (currentUrl == url1) "Stay MV 影视" else "肖申克的救赎 高清"
+                            title = if (currentUrl == url1) "加勒比海盗 第一部 解说" else "肖申克的救赎 高清"
                         )
 
                         Box(

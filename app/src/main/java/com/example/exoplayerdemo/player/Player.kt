@@ -1,8 +1,9 @@
-package com.example.jetpackdemo.player
+package com.example.exoplayerdemo.player
 
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.pm.ActivityInfo
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
@@ -17,6 +18,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -42,8 +45,10 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.PlayerView
 import com.airbnb.lottie.LottieAnimationView
-import com.example.jetpackdemo.R
+import com.example.exoplayerdemo.R
+import com.example.exoplayerdemo.view.DanmuView
 import kotlinx.coroutines.delay
+
 
 @SuppressLint("SourceLockedOrientationActivity")
 @OptIn(UnstableApi::class)
@@ -58,16 +63,20 @@ fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
     var isLandScreen by remember { mutableStateOf(false) }
     var isSeeking by remember { mutableStateOf(false) }
+    val danmuMutableList = remember { mutableStateListOf<Danmu>() }
+    var currentPlayPosition by remember { mutableLongStateOf(0L) }
 
     fun play() {
         val playButton = activity.findViewById<ImageView>(R.id.playButton)
         exoPlayer.play()
+        activity.findViewById<DanmuView>(R.id.danmuView)?.resumeDanmu()
         playButton.setImageResource(R.drawable.round_pause_24)
     }
 
     fun pause() {
         val playButton = activity.findViewById<ImageView>(R.id.playButton)
         exoPlayer.pause()
+        activity.findViewById<DanmuView>(R.id.danmuView)?.pauseDanmu()
         playButton.setImageResource(R.drawable.round_play_arrow_24)
     }
 
@@ -154,11 +163,38 @@ fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        danmuMutableList.addAll(danmuList)
+
+        while (true) {
+            if (exoPlayer.isPlaying) {
+                val currentPos = exoPlayer.currentPosition
+                currentPlayPosition = currentPos
+            }
+            delay(1000)
+        }
+    }
+
+    // 处理弹幕显示
+    LaunchedEffect(currentPlayPosition) {
+        val currentTimeSeconds = currentPlayPosition / 1000
+        val showDanmus = danmuMutableList
+            .filter { it.time == currentTimeSeconds.toInt() }
+            .take(3)
+        showDanmus.forEach { danmu ->
+            activity.findViewById<DanmuView>(R.id.danmuView)
+                ?.addDanmu(danmu, currentTimeSeconds.toInt())
+//            danmuMutableList.remove(danmu)
+        }
+    }
+
     AndroidView(
         factory = { ctx ->
             val inflater = LayoutInflater.from(ctx)
             val rootView = inflater.inflate(R.layout.exo_player, null, false)
+            val controlView = rootView.findViewById<PlayerControlView>(R.id.playerControlView)
             val playerView = rootView.findViewById<PlayerView>(R.id.playerView).apply {
+                controlView.player = exoPlayer
                 player = exoPlayer
             }
 
@@ -173,6 +209,16 @@ fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
                 val loadingIcon = findViewById<LottieAnimationView>(R.id.loadingIcon)
 
                 exoTitle.text = title
+
+                playerView.setOnClickListener {
+                    controlView.apply {
+                        if (isFullyVisible) {
+                            hide()
+                        } else {
+                            show()
+                        }
+                    }
+                }
 
                 // 播放按钮点击事件
                 playButton.setOnClickListener {
@@ -214,15 +260,14 @@ fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
                     }
 
                     override fun onStartTrackingTouch(seekBar: SeekBar) {
-                        playerView.controllerShowTimeoutMs = 0
+                        controlView.showTimeoutMs = 0
                         isSeeking = true
                     }
 
                     override fun onStopTrackingTouch(seekBar: SeekBar) {
                         exoPlayer.seekTo(seekBar.progress.toLong())
                         isSeeking = false
-                        playerView.controllerShowTimeoutMs =
-                            PlayerControlView.DEFAULT_SHOW_TIMEOUT_MS
+                        controlView.showTimeoutMs = PlayerControlView.DEFAULT_SHOW_TIMEOUT_MS
                     }
                 })
 
