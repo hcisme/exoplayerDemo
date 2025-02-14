@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.media3.exoplayer.hls)
     implementation(libs.lottie)
+    implementation(libs.lottie.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

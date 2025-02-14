@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.getValue
@@ -23,7 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowInsetsControllerCompat
-import com.example.exoplayerdemo.player.Player
+import com.example.exoplayerdemo.player.PlayerNew
 import com.example.exoplayerdemo.ui.theme.JetpackDemoTheme
 
 class MainActivity : ComponentActivity() {
@@ -52,15 +53,20 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .systemBarsPadding()
                 ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Player(
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.background)
+                    ) {
+                        PlayerNew(
                             mediaUri = currentUrl,
                             title = if (currentUrl == url1) "加勒比海盗 第一部 解说" else "肖申克的救赎 高清"
                         )
 
                         Box(
                             modifier = Modifier
-                                .fillMaxSize(),
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.background),
                             contentAlignment = Alignment.Center
                         ) {
                             Button(

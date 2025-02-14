@@ -312,7 +312,7 @@ fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
             if (playerView.player != exoPlayer) {
                 playerView.player = exoPlayer
             }
-        }
+        },
     )
 
     BackHandler(isLandScreen) {

@@ -1,0 +1,280 @@
+package com.example.exoplayerdemo.player
+
+import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.pm.ActivityInfo
+import androidx.activity.compose.BackHandler
+import androidx.annotation.OptIn
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.net.toUri
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.DefaultLifecycleObserver
+import androidx.lifecycle.LifecycleOwner
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.ResolvingDataSource
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.ui.PlayerView
+import com.airbnb.lottie.compose.LottieAnimation
+import com.airbnb.lottie.compose.LottieCompositionSpec
+import com.airbnb.lottie.compose.rememberLottieComposition
+import com.example.exoplayerdemo.R
+import kotlinx.coroutines.delay
+
+@SuppressLint("SourceLockedOrientationActivity")
+@OptIn(UnstableApi::class)
+@Composable
+fun PlayerNew(mediaUri: String, title: String, autoPlay: Boolean = false) {
+    val context = LocalContext.current
+    val activity = context as Activity
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val insetsController = remember {
+        WindowInsetsControllerCompat(activity.window, activity.window.decorView)
+    }
+    val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.loading_icon))
+    val exoPlayer = remember { ExoPlayer.Builder(context).build() }
+    var firstLoad = remember { true }
+    var isLandScreen by remember { mutableStateOf(activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) }
+    var isSeeking by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(true) }
+    var isPlaying by remember { mutableStateOf(false) }
+    var currentTimePosition by remember { mutableFloatStateOf(0F) }
+    var duration by remember { mutableFloatStateOf(0F) }
+
+    fun play() {
+        isPlaying = true
+        exoPlayer.play()
+    }
+
+    fun pause() {
+        isPlaying = false
+        exoPlayer.pause()
+    }
+
+    fun enterFullscreen() {
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        insetsController.hide(WindowInsetsCompat.Type.systemBars())
+        isLandScreen = true
+    }
+
+    fun exitFullscreen() {
+        activity.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        insetsController.show(WindowInsetsCompat.Type.systemBars())
+        isLandScreen = false
+    }
+
+    LaunchedEffect(mediaUri) {
+        currentTimePosition = 0F
+        duration = 0F
+
+        val mediaItem = MediaItem.Builder()
+            .setUri(mediaUri)
+            .setMimeType(MimeTypes.APPLICATION_M3U8)
+            .build()
+
+        val httpDataSource = DefaultHttpDataSource.Factory()
+        val dataSourceFactory = ResolvingDataSource.Factory(httpDataSource) { dataSpec ->
+            val link = dataSpec.uri.toString()
+            if (link.endsWith(".ts")) {
+                val fileName = link.substringAfterLast("/")
+                dataSpec.withUri("$mediaUri/$fileName".toUri())
+            } else {
+                dataSpec
+            }
+        }
+
+        val mediaSource = DefaultMediaSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
+
+        exoPlayer.setMediaSource(mediaSource)
+        exoPlayer.prepare()
+        exoPlayer.playWhenReady = autoPlay
+    }
+
+    DisposableEffect(exoPlayer) {
+        onDispose {
+            exoPlayer.release()
+        }
+    }
+
+    DisposableEffect(exoPlayer, lifecycleOwner) {
+        val observer = object : DefaultLifecycleObserver {
+            override fun onPause(owner: LifecycleOwner) {
+                pause()
+            }
+
+            override fun onResume(owner: LifecycleOwner) {
+                if (!firstLoad) {
+                    play()
+                } else {
+                    firstLoad = false
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    LaunchedEffect(exoPlayer, isSeeking) {
+        while (true) {
+            if (!isSeeking && exoPlayer.isPlaying) {
+                currentTimePosition = exoPlayer.currentPosition.toFloat()
+            }
+            delay(1000)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .background(Color.Black)
+            .then(if (isLandScreen) Modifier.fillMaxSize() else Modifier.aspectRatio(16 / 9f))
+    ) {
+        AndroidView(
+            factory = { ctx ->
+                val playerView = PlayerView(ctx).apply {
+                    player = exoPlayer
+                    useController = false
+                }
+
+                // ExoPlayer监听器
+                exoPlayer.addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(state: Int) {
+                        when (state) {
+                            Player.STATE_BUFFERING -> {
+                                isLoading = true
+                            }
+
+                            Player.STATE_READY -> {
+                                // 更新总时长和SeekBar最大值
+                                if (exoPlayer.duration != C.TIME_UNSET) {
+                                    duration = exoPlayer.duration.toFloat()
+                                }
+                                isLoading = false
+                            }
+
+                            Player.STATE_ENDED -> {
+                                isLoading = false
+                            }
+
+                            Player.STATE_IDLE -> {
+                                isLoading = false
+                            }
+                        }
+                    }
+
+                    override fun onIsLoadingChanged(isLoading: Boolean) {
+                        // 更新缓冲进度
+                        exoPlayer.bufferedPosition.toInt()
+                    }
+                })
+
+                playerView
+            },
+            modifier = Modifier.fillMaxSize(),
+            update = { playerView ->
+                if (playerView.player != exoPlayer) {
+                    playerView.player = exoPlayer
+                }
+            }
+        )
+
+        // 弹幕
+//        BulletChat(
+//            bulletChatList = danmuList,
+//            isPlaying = isPlaying,
+//            currentPosition = currentTimePosition.toLong()
+//        )
+
+
+        if (isLoading) {
+            LottieAnimation(
+                composition = composition,
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .size(56.dp)
+            )
+        }
+
+        // 播放控件
+        PlayerController(
+            isPlaying = isPlaying,
+            title = title,
+            isLandscape = isLandScreen,
+            currentTimePosition = currentTimePosition,
+            duration = duration,
+            onClickBackButton = {
+                if (isLandScreen) {
+                    exitFullscreen()
+                }
+            },
+            onClickPlayButton = {
+                if (isPlaying) {
+                    pause()
+                } else {
+                    play()
+                }
+            },
+            onSliderValueChange = {
+                currentTimePosition = it
+                if (!isSeeking) {
+                    isSeeking = true
+                }
+            },
+            onSliderValueChangeFinished = {
+                exoPlayer.seekTo(currentTimePosition.toLong())
+                isSeeking = false
+            },
+            onClickFullScreen = {
+                if (isLandScreen) {
+                    exitFullscreen()
+                } else {
+                    enterFullscreen()
+                }
+            },
+            onDoubleClick = {
+                if (isPlaying) {
+                    pause()
+                } else {
+                    play()
+                }
+            },
+            onLongClick = {
+                play()
+                exoPlayer.setPlaybackSpeed(1.5F)
+            },
+            onLongClickEnd = {
+                exoPlayer.setPlaybackSpeed(1F)
+            }
+        )
+    }
+
+    BackHandler(isLandScreen) {
+        exitFullscreen()
+    }
+}
