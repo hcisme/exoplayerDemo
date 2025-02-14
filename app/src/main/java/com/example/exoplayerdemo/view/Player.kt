@@ -1,9 +1,8 @@
-package com.example.exoplayerdemo.player
+package com.example.exoplayerdemo.view
 
 import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.pm.ActivityInfo
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.widget.ImageView
@@ -46,9 +45,9 @@ import androidx.media3.ui.PlayerControlView
 import androidx.media3.ui.PlayerView
 import com.airbnb.lottie.LottieAnimationView
 import com.example.exoplayerdemo.R
-import com.example.exoplayerdemo.view.DanmuView
+import com.example.exoplayerdemo.player.Danmu
+import com.example.exoplayerdemo.player.danmuList
 import kotlinx.coroutines.delay
-
 
 @SuppressLint("SourceLockedOrientationActivity")
 @OptIn(UnstableApi::class)
