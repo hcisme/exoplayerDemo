@@ -205,11 +205,11 @@ fun PlayerNew(mediaUri: String, title: String, autoPlay: Boolean = false) {
         )
 
         // 弹幕
-//        BulletChat(
-//            bulletChatList = danmuList,
-//            isPlaying = isPlaying,
-//            currentPosition = currentTimePosition.toLong()
-//        )
+        BulletChat(
+            bulletChatList = danmuList,
+            isPlaying = isPlaying,
+            currentPosition = currentTimePosition.toLong()
+        )
 
 
         if (isLoading) {
