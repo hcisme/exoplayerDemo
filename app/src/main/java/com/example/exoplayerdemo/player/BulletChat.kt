@@ -105,14 +105,17 @@ fun BulletChat(
 
                 val initialX = view.width.toFloat()
                 val duration = (initialX / 200f * 1000).toInt()
+                val textWidth = textLayoutResult.size.width
+                val textHeight = textLayoutResult.size.height
 
                 ActiveDanmu(
                     text = item.text,
                     color = color,
                     animatable = Animatable(initialX),
                     startTime = System.currentTimeMillis(),
-                    y = (i % 4) * textLayoutResult.size.height.toFloat(),
-                    textWidth = textLayoutResult.size.width.toFloat(),
+                    y = (i % 3) * textHeight.toFloat(),
+                    textWidth = textWidth.toFloat(),
+                    textHeight = textHeight.toFloat(),
                     durationMillis = duration
                 ).also { startDanmuAnimation(it, duration) }
             }
@@ -129,9 +132,10 @@ fun BulletChat(
                     text = item.text,
                     fontSize = bulletChatFs,
                     color = item.color,
-                    modifier = Modifier.offset {
-                        IntOffset(item.animatable.value.toInt(), item.y.toInt())
-                    }
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(item.animatable.value.toInt(), item.y.toInt())
+                        }
                 )
             }
         }
@@ -156,6 +160,7 @@ private fun parseDanmuColor(colorString: String): Color {
 }
 
 data class ActiveDanmu(
+    val id: Long = System.currentTimeMillis(),
     val text: String,
     val color: Color,
     val animatable: Animatable<Float, AnimationVector1D>,
@@ -163,5 +168,6 @@ data class ActiveDanmu(
     val startTime: Long,
     val y: Float,
     val textWidth: Float,
+    val textHeight: Float,
     val durationMillis: Int
 )

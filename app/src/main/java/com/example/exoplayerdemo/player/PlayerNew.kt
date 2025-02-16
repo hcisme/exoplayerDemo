@@ -62,7 +62,7 @@ fun PlayerNew(mediaUri: String, title: String, autoPlay: Boolean = false) {
     var isLandScreen by remember { mutableStateOf(activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) }
     var isSeeking by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
-    var isPlaying by remember { mutableStateOf(false) }
+    var isPlaying by remember { mutableStateOf(autoPlay) }
     var currentTimePosition by remember { mutableFloatStateOf(0F) }
     var duration by remember { mutableFloatStateOf(0F) }
 
