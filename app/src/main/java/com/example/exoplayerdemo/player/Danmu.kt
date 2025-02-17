@@ -10,13 +10,13 @@ data class Danmu(
     val time: Int
 )
 
-val danmuList = listOf(
-    Danmu(
-        id = 1,
-        text = "壬戌之秋，七月既望，苏子与客泛舟游于赤壁之下。",
-        color = "#FFD700",
-        time = 1
-    ),
+val danmuList = listOf<Danmu>(
+//    Danmu(
+//        id = 1,
+//        text = "壬戌之秋，七月既望，苏子与客泛舟游于赤壁之下。",
+//        color = "#FFD700",
+//        time = 1
+//    ),
 //    Danmu(text = "清风徐来，水波不兴。", color = "#FF6347", time = 2),
 //    Danmu(text = "举酒属客，诵明月之诗，歌窈窕之章。", color = "#32CD32", time = 3),
 //    Danmu(text = "少焉，月出于东山之上，徘徊于斗牛之间。", color = "#1E90FF", time = 5),
