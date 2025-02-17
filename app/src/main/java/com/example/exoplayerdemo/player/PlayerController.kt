@@ -62,6 +62,7 @@ fun PlayerController(
     onSliderValueChange: (Float) -> Unit = {},
     onSliderValueChangeFinished: (() -> Unit)? = null,
     onClickFullScreen: () -> Unit = {},
+    onClick: (() -> Unit)? = null,
     onDoubleClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     onLongClickEnd: (() -> Unit)? = null,
@@ -116,6 +117,7 @@ fun PlayerController(
                 ) {
                     isShowController = !isShowController
                     onListenerControllerVisible?.invoke(isShowController)
+                    onClick?.invoke()
                 }
         ) {
             // 顶部控制栏

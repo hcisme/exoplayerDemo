@@ -4,8 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
@@ -13,11 +12,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextLayoutResult
@@ -34,31 +39,93 @@ var i = -1
 
 @Composable
 fun BulletChat(
-    modifier: Modifier = Modifier,
     bulletChatList: List<Danmu>,
     isPlaying: Boolean,
     currentPosition: Long,
+    speed: Float = 80F,
+    trigger: Long,
+    danmuContextMenu: @Composable ((IntOffset, ActiveDanmu) -> Unit)? = null
 ) {
     val view = LocalView.current
     val animateScope = rememberCoroutineScope()
     val textMeasurer = rememberTextMeasurer()
     val activeBulletChats = remember { mutableStateListOf<ActiveDanmu>() }
+    var menuPosition by remember { mutableStateOf(Offset.Zero) }
 
     fun startDanmuAnimation(danmu: ActiveDanmu, dt: Int) {
-        // 确保不重复添加已在列表中的弹幕
-        if (!activeBulletChats.contains(danmu)) {
+        // 1. 添加或替换列表中的弹幕
+        val index = activeBulletChats.indexOfFirst { it.id == danmu.id }
+        if (index == -1) {
             activeBulletChats.add(danmu)
+        } else {
+            activeBulletChats[index] = danmu
         }
 
-        danmu.job = animateScope.launch {
+        // 2. 创建实际 Job 并更新弹幕对象
+        val newJob = animateScope.launch {
             danmu.animatable.animateTo(
                 targetValue = -danmu.textWidth,
-                animationSpec = tween(
-                    durationMillis = dt,
-                    easing = LinearEasing
-                )
+                animationSpec = tween(durationMillis = dt, easing = LinearEasing)
             )
             activeBulletChats.remove(danmu)
+        }
+
+        // 3. 更新弹幕对象的 Job 引用
+        val updatedDanmu = danmu.copy(job = newJob)
+        val latestIndex = activeBulletChats.indexOfFirst { it.id == updatedDanmu.id }
+        if (latestIndex != -1) {
+            activeBulletChats[latestIndex] = updatedDanmu
+        }
+    }
+
+    fun resumeDanmuAnimation() {
+        activeBulletChats.toList().forEach { danmu ->
+            val currentX = danmu.animatable.value
+            val targetX = -danmu.textWidth
+
+            if (currentX <= targetX) {
+                activeBulletChats.remove(danmu)
+                return@forEach
+            }
+
+            val remainingDistance = currentX - targetX
+            val remainingTime = (remainingDistance / speed * 1000).toInt()
+
+            if (remainingTime > 0) {
+                val latestDanmu = activeBulletChats.find { it.id == danmu.id } ?: return@forEach
+                startDanmuAnimation(latestDanmu, remainingTime)
+            } else {
+                activeBulletChats.remove(danmu)
+            }
+        }
+    }
+
+    fun onClickDanmu(textPosition: Offset, item: ActiveDanmu, offset: Offset) {
+        // 通过 id 查找当前最新的弹幕对象
+        val currentItem = activeBulletChats.find { it.id == item.id } ?: return
+        val globalOffset = Offset(
+            x = textPosition.x + offset.x,
+            y = item.y + item.textHeight + 4
+        )
+        menuPosition = globalOffset
+        currentItem.job?.cancel()
+
+        val currentIndex =
+            activeBulletChats.indexOfFirst { it.id == currentItem.id }
+        activeBulletChats.forEach { it.isShowPopover = false }
+        if (currentIndex >= 0) {
+            activeBulletChats[currentIndex] =
+                currentItem.copy(isShowPopover = true)
+        }
+    }
+
+    LaunchedEffect(trigger) {
+        if (activeBulletChats.all { !it.isShowPopover }) {
+            return@LaunchedEffect
+        }
+        activeBulletChats.forEach { it.isShowPopover = false }
+        if (isPlaying) {
+            resumeDanmuAnimation()
         }
     }
 
@@ -68,24 +135,7 @@ fun BulletChat(
             // 暂停时取消所有动画
             activeBulletChats.forEach { it.job?.cancel() }
         } else {
-            activeBulletChats.forEach { danmu ->
-                val currentX = danmu.animatable.value
-                val targetX = -danmu.textWidth
-
-                if (currentX <= targetX) {
-                    activeBulletChats.remove(danmu)
-                    return@forEach
-                }
-
-                val remainingDistance = currentX - targetX
-                val remainingTime = (remainingDistance / 200f * 1000).toInt()
-
-                if (remainingTime > 0) {
-                    startDanmuAnimation(danmu, remainingTime)
-                } else {
-                    activeBulletChats.remove(danmu)
-                }
-            }
+            resumeDanmuAnimation()
         }
     }
 
@@ -99,16 +149,21 @@ fun BulletChat(
             .filter { it.time == currentSeconds }
             .take(3)
             .forEach { item ->
+                if (activeBulletChats.any { it.id == item.id }) {
+                    return@forEach
+                }
+
                 val color = parseDanmuColor(item.color)
                 val textLayoutResult = measureDanmuText(item.text, textMeasurer)
                 i += 1
 
                 val initialX = view.width.toFloat()
-                val duration = (initialX / 200f * 1000).toInt()
+                val duration = (initialX / speed * 1000).toInt()
                 val textWidth = textLayoutResult.size.width
                 val textHeight = textLayoutResult.size.height
 
                 ActiveDanmu(
+                    id = item.id,
                     text = item.text,
                     color = color,
                     animatable = Animatable(initialX),
@@ -126,16 +181,34 @@ fun BulletChat(
     }
 
     CompositionLocalProvider(LocalContentColor provides Color.White) {
-        Box(modifier.fillMaxSize()) {
-            activeBulletChats.forEach { item ->
-                Text(
-                    text = item.text,
-                    fontSize = bulletChatFs,
-                    color = item.color,
-                    modifier = Modifier
-                        .offset {
-                            IntOffset(item.animatable.value.toInt(), item.y.toInt())
+        activeBulletChats.forEach { item ->
+            var textPosition by remember { mutableStateOf(Offset.Zero) }
+
+            Text(
+                text = item.text,
+                fontSize = bulletChatFs,
+                color = item.color,
+                modifier = Modifier
+                    .offset {
+                        IntOffset(item.animatable.value.toInt(), item.y.toInt())
+                    }
+                    .onGloballyPositioned { coordinates ->
+                        textPosition = coordinates.localToWindow(Offset.Zero)
+                    }
+                    .pointerInput(Unit) {
+                        detectTapGestures { offset ->
+                            onClickDanmu(textPosition = textPosition, item = item, offset = offset)
                         }
+                    }
+            )
+
+            if (item.isShowPopover) {
+                danmuContextMenu?.invoke(
+                    IntOffset(
+                        menuPosition.x.toInt(),
+                        menuPosition.y.toInt()
+                    ),
+                    item
                 )
             }
         }
@@ -160,14 +233,15 @@ private fun parseDanmuColor(colorString: String): Color {
 }
 
 data class ActiveDanmu(
-    val id: Long = System.currentTimeMillis(),
+    val id: Long,
     val text: String,
     val color: Color,
-    val animatable: Animatable<Float, AnimationVector1D>,
+    var animatable: Animatable<Float, AnimationVector1D>,
     var job: Job? = null,
     val startTime: Long,
     val y: Float,
     val textWidth: Float,
     val textHeight: Float,
-    val durationMillis: Int
+    val durationMillis: Int,
+    var isShowPopover: Boolean = false
 )

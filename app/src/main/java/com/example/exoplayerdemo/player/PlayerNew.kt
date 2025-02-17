@@ -9,22 +9,30 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import androidx.core.net.toUri
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -65,6 +73,7 @@ fun PlayerNew(mediaUri: String, title: String, autoPlay: Boolean = false) {
     var isPlaying by remember { mutableStateOf(autoPlay) }
     var currentTimePosition by remember { mutableFloatStateOf(0F) }
     var duration by remember { mutableFloatStateOf(0F) }
+    var danmuMenuTrigger by remember { mutableLongStateOf(0) }
 
     fun play() {
         isPlaying = true
@@ -204,14 +213,6 @@ fun PlayerNew(mediaUri: String, title: String, autoPlay: Boolean = false) {
             }
         )
 
-        // 弹幕
-        BulletChat(
-            bulletChatList = danmuList,
-            isPlaying = isPlaying,
-            currentPosition = currentTimePosition.toLong()
-        )
-
-
         if (isLoading) {
             LottieAnimation(
                 composition = composition,
@@ -234,11 +235,8 @@ fun PlayerNew(mediaUri: String, title: String, autoPlay: Boolean = false) {
                 }
             },
             onClickPlayButton = {
-                if (isPlaying) {
-                    pause()
-                } else {
-                    play()
-                }
+                if (isPlaying) pause() else play()
+                danmuMenuTrigger += 1
             },
             onSliderValueChange = {
                 currentTimePosition = it
@@ -257,12 +255,12 @@ fun PlayerNew(mediaUri: String, title: String, autoPlay: Boolean = false) {
                     enterFullscreen()
                 }
             },
+            onClick = {
+                danmuMenuTrigger += 1
+            },
             onDoubleClick = {
-                if (isPlaying) {
-                    pause()
-                } else {
-                    play()
-                }
+                if (isPlaying) pause() else play()
+                danmuMenuTrigger += 1
             },
             onLongClick = {
                 play()
@@ -272,6 +270,25 @@ fun PlayerNew(mediaUri: String, title: String, autoPlay: Boolean = false) {
                 exoPlayer.setPlaybackSpeed(1F)
             }
         )
+
+        // 弹幕
+        BulletChat(
+            bulletChatList = danmuList,
+            isPlaying = isPlaying,
+            currentPosition = currentTimePosition.toLong(),
+            trigger = danmuMenuTrigger,
+        ) { offset, _ ->
+            Box(
+                modifier = Modifier
+                    .offset(offset = { offset })
+                    .background(Color.Black.copy(alpha = 0.4F), CircleShape)
+                    .clip(CircleShape)
+                    .padding(horizontal = 6.dp)
+                    .zIndex(1F)
+            ) {
+                Text("上下文菜单", fontSize = 10.sp)
+            }
+        }
     }
 
     BackHandler(isLandScreen) {
