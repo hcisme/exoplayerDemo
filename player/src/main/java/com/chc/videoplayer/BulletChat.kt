@@ -1,4 +1,4 @@
-package com.example.exoplayerdemo.player
+package com.chc.videoplayer
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector1D

@@ -1,4 +1,4 @@
-package com.example.exoplayerdemo.player
+package com.chc.videoplayer
 
 data class Danmu(
     val id: Long,

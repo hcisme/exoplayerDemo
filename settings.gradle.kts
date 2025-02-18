@@ -23,3 +23,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "exoplayerDemo"
 include(":app")
+include(":player")

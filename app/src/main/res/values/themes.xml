@@ -7,7 +7,7 @@
 
         <item name="windowSplashScreenAnimatedIcon">@drawable/news_avd_v02</item>
 
-        <item name="windowSplashScreenAnimationDuration">1200</item>
+        <item name="windowSplashScreenAnimationDuration">1500</item>
 
         <item name="postSplashScreenTheme">@style/Theme.App</item>
     </style>

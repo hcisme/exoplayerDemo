@@ -1,4 +1,4 @@
-package com.example.exoplayerdemo.player
+package com.chc.videoplayer
 
 import android.annotation.SuppressLint
 import android.app.Activity
@@ -51,13 +51,13 @@ import androidx.media3.ui.PlayerView
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieComposition
-import com.example.exoplayerdemo.R
+import com.chc.player.R
 import kotlinx.coroutines.delay
 
 @SuppressLint("SourceLockedOrientationActivity")
 @OptIn(UnstableApi::class)
 @Composable
-fun PlayerNew(mediaUri: String, title: String, autoPlay: Boolean = false) {
+fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
     val context = LocalContext.current
     val activity = context as Activity
     val lifecycleOwner = LocalLifecycleOwner.current

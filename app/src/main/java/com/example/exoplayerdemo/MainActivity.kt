@@ -23,7 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowInsetsControllerCompat
-import com.example.exoplayerdemo.player.PlayerNew
+import com.chc.videoplayer.Player
 import com.example.exoplayerdemo.ui.theme.JetpackDemoTheme
 
 class MainActivity : ComponentActivity() {
@@ -77,7 +77,7 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                             .background(MaterialTheme.colorScheme.background)
                     ) {
-                        PlayerNew(
+                        Player(
                             mediaUri = videoList[currentIndex].url,
                             title = videoList[currentIndex].title
                         )
