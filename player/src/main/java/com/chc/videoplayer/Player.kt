@@ -57,12 +57,20 @@ import kotlinx.coroutines.delay
 @SuppressLint("SourceLockedOrientationActivity")
 @OptIn(UnstableApi::class)
 @Composable
-fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
+fun Player(
+    mediaUri: String,
+    title: String,
+    autoPlay: Boolean = false,
+    isShowBulletChat: Boolean = false,
+    onClickBackButton: () -> Unit = {}
+) {
     val context = LocalContext.current
     val activity = context as Activity
     val lifecycleOwner = LocalLifecycleOwner.current
     val insetsController = remember {
-        WindowInsetsControllerCompat(activity.window, activity.window.decorView)
+        WindowInsetsControllerCompat(activity.window, activity.window.decorView).apply {
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
     }
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.loading_icon))
     val exoPlayer = remember { ExoPlayer.Builder(context).build() }
@@ -216,6 +224,7 @@ fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
         if (isLoading) {
             LottieAnimation(
                 composition = composition,
+                iterations = Int.MAX_VALUE,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .size(56.dp)
@@ -232,6 +241,8 @@ fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
             onClickBackButton = {
                 if (isLandScreen) {
                     exitFullscreen()
+                } else {
+                    onClickBackButton()
                 }
             },
             onClickPlayButton = {
@@ -272,21 +283,23 @@ fun Player(mediaUri: String, title: String, autoPlay: Boolean = false) {
         )
 
         // 弹幕
-        BulletChat(
-            bulletChatList = danmuList,
-            isPlaying = isPlaying,
-            currentPosition = currentTimePosition.toLong(),
-            trigger = danmuMenuTrigger,
-        ) { offset, _ ->
-            Box(
-                modifier = Modifier
-                    .offset(offset = { offset })
-                    .background(Color.Black.copy(alpha = 0.4F), CircleShape)
-                    .clip(CircleShape)
-                    .padding(horizontal = 6.dp)
-                    .zIndex(1F)
-            ) {
-                Text("上下文菜单", fontSize = 10.sp)
+        if (isShowBulletChat) {
+            BulletChat(
+                bulletChatList = danmuList,
+                isPlaying = isPlaying,
+                currentPosition = currentTimePosition.toLong(),
+                trigger = danmuMenuTrigger,
+            ) { offset, _ ->
+                Box(
+                    modifier = Modifier
+                        .offset(offset = { offset })
+                        .background(Color.Black.copy(alpha = 0.4F), CircleShape)
+                        .clip(CircleShape)
+                        .padding(horizontal = 6.dp)
+                        .zIndex(1F)
+                ) {
+                    Text("上下文菜单", fontSize = 10.sp)
+                }
             }
         }
     }
