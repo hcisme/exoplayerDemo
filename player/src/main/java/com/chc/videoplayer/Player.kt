@@ -192,8 +192,8 @@ fun Player(
             AndroidView(
                 factory = { ctx ->
                     val playerView = PlayerView(ctx).apply {
-                        player = exoPlayer
                         useController = false
+                        player = exoPlayer
                     }
 
                     // ExoPlayer监听器
