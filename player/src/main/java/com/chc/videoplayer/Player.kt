@@ -52,7 +52,10 @@ import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.chc.player.R
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 
 @SuppressLint("SourceLockedOrientationActivity")
 @OptIn(UnstableApi::class)
@@ -73,7 +76,7 @@ fun Player(
         }
     }
     val composition by rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.loading_icon))
-    val exoPlayer = remember { ExoPlayer.Builder(context).build() }
+    var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     var firstLoad = remember { true }
     var isLandScreen by remember { mutableStateOf(activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) }
     var isSeeking by remember { mutableStateOf(false) }
@@ -83,14 +86,20 @@ fun Player(
     var duration by remember { mutableFloatStateOf(0F) }
     var danmuMenuTrigger by remember { mutableLongStateOf(0) }
 
+    LaunchedEffect(Unit) {
+        launch(Dispatchers.IO) {
+            exoPlayer = ExoPlayer.Builder(context).build()
+        }.join()
+    }
+
     fun play() {
         isPlaying = true
-        exoPlayer.play()
+        exoPlayer?.play()
     }
 
     fun pause() {
         isPlaying = false
-        exoPlayer.pause()
+        exoPlayer?.pause()
     }
 
     fun enterFullscreen() {
@@ -105,7 +114,10 @@ fun Player(
         isLandScreen = false
     }
 
-    LaunchedEffect(mediaUri) {
+    LaunchedEffect(exoPlayer, mediaUri) {
+        if (exoPlayer == null) {
+            return@LaunchedEffect
+        }
         currentTimePosition = 0F
         duration = 0F
 
@@ -127,14 +139,14 @@ fun Player(
 
         val mediaSource = DefaultMediaSourceFactory(dataSourceFactory).createMediaSource(mediaItem)
 
-        exoPlayer.setMediaSource(mediaSource)
-        exoPlayer.prepare()
-        exoPlayer.playWhenReady = autoPlay
+        exoPlayer!!.setMediaSource(mediaSource)
+        exoPlayer!!.prepare()
+        exoPlayer!!.playWhenReady = autoPlay
     }
 
-    DisposableEffect(exoPlayer) {
+    DisposableEffect(Unit) {
         onDispose {
-            exoPlayer.release()
+            exoPlayer?.release()
         }
     }
 
@@ -159,9 +171,13 @@ fun Player(
     }
 
     LaunchedEffect(exoPlayer, isSeeking) {
-        while (true) {
-            if (!isSeeking && exoPlayer.isPlaying) {
-                currentTimePosition = exoPlayer.currentPosition.toFloat()
+        if (exoPlayer == null) {
+            return@LaunchedEffect
+        }
+
+        while (isActive) {
+            if (!isSeeking && exoPlayer!!.isPlaying) {
+                currentTimePosition = exoPlayer!!.currentPosition.toFloat()
             }
             delay(1000)
         }
@@ -172,54 +188,56 @@ fun Player(
             .background(Color.Black)
             .then(if (isLandScreen) Modifier.fillMaxSize() else Modifier.aspectRatio(16 / 9f))
     ) {
-        AndroidView(
-            factory = { ctx ->
-                val playerView = PlayerView(ctx).apply {
-                    player = exoPlayer
-                    useController = false
-                }
+        if (exoPlayer != null) {
+            AndroidView(
+                factory = { ctx ->
+                    val playerView = PlayerView(ctx).apply {
+                        player = exoPlayer
+                        useController = false
+                    }
 
-                // ExoPlayer监听器
-                exoPlayer.addListener(object : Player.Listener {
-                    override fun onPlaybackStateChanged(state: Int) {
-                        when (state) {
-                            Player.STATE_BUFFERING -> {
-                                isLoading = true
-                            }
-
-                            Player.STATE_READY -> {
-                                // 更新总时长和SeekBar最大值
-                                if (exoPlayer.duration != C.TIME_UNSET) {
-                                    duration = exoPlayer.duration.toFloat()
+                    // ExoPlayer监听器
+                    exoPlayer!!.addListener(object : Player.Listener {
+                        override fun onPlaybackStateChanged(state: Int) {
+                            when (state) {
+                                Player.STATE_BUFFERING -> {
+                                    isLoading = true
                                 }
-                                isLoading = false
-                            }
 
-                            Player.STATE_ENDED -> {
-                                isLoading = false
-                            }
+                                Player.STATE_READY -> {
+                                    // 更新总时长和SeekBar最大值
+                                    if (exoPlayer!!.duration != C.TIME_UNSET) {
+                                        duration = exoPlayer!!.duration.toFloat()
+                                    }
+                                    isLoading = false
+                                }
 
-                            Player.STATE_IDLE -> {
-                                isLoading = false
+                                Player.STATE_ENDED -> {
+                                    isLoading = false
+                                }
+
+                                Player.STATE_IDLE -> {
+                                    isLoading = false
+                                }
                             }
                         }
-                    }
 
-                    override fun onIsLoadingChanged(isLoading: Boolean) {
-                        // 更新缓冲进度
-                        exoPlayer.bufferedPosition.toInt()
-                    }
-                })
+                        override fun onIsLoadingChanged(isLoading: Boolean) {
+                            // 更新缓冲进度
+                            exoPlayer!!.bufferedPosition.toInt()
+                        }
+                    })
 
-                playerView
-            },
-            modifier = Modifier.fillMaxSize(),
-            update = { playerView ->
-                if (playerView.player != exoPlayer) {
-                    playerView.player = exoPlayer
+                    playerView
+                },
+                modifier = Modifier.fillMaxSize(),
+                update = { playerView ->
+                    if (playerView.player != exoPlayer) {
+                        playerView.player = exoPlayer
+                    }
                 }
-            }
-        )
+            )
+        }
 
         if (isLoading) {
             LottieAnimation(
@@ -256,7 +274,7 @@ fun Player(
                 }
             },
             onSliderValueChangeFinished = {
-                exoPlayer.seekTo(currentTimePosition.toLong())
+                exoPlayer?.seekTo(currentTimePosition.toLong())
                 isSeeking = false
             },
             onClickFullScreen = {
@@ -275,10 +293,10 @@ fun Player(
             },
             onLongClick = {
                 play()
-                exoPlayer.setPlaybackSpeed(1.5F)
+                exoPlayer?.setPlaybackSpeed(1.5F)
             },
             onLongClickEnd = {
-                exoPlayer.setPlaybackSpeed(1F)
+                exoPlayer?.setPlaybackSpeed(1F)
             }
         )
 
