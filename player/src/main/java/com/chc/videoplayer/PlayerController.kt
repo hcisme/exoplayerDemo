@@ -54,6 +54,7 @@ fun PlayerController(
     modifier: Modifier = Modifier,
     isLandscape: Boolean,
     isPlaying: Boolean,
+    isShowBulletChat: Boolean,
     title: String,
     currentTimePosition: Float,
     duration: Float,
@@ -62,6 +63,7 @@ fun PlayerController(
     onSliderValueChange: (Float) -> Unit = {},
     onSliderValueChangeFinished: (() -> Unit)? = null,
     onClickFullScreen: () -> Unit = {},
+    onClickDanmuIcon: () -> Unit = {},
     onClick: (() -> Unit)? = null,
     onDoubleClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
@@ -226,11 +228,25 @@ fun PlayerController(
                                     contentDescription = "播放暂停"
                                 )
                             }
-                            IconButton(onClick = onClickFullScreen) {
-                                Icon(
-                                    painterResource(R.drawable.baseline_fullscreen_exit_24),
-                                    contentDescription = "全屏"
-                                )
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                IconButton(onClick = onClickDanmuIcon) {
+                                    Icon(
+                                        painterResource(if (isShowBulletChat) R.drawable.danmu_open_v24 else R.drawable.danmu_close_v24),
+                                        contentDescription = "弹幕开关",
+                                        tint = Color.Unspecified
+                                    )
+                                }
+
+                                IconButton(onClick = onClickFullScreen) {
+                                    Icon(
+                                        painterResource(R.drawable.baseline_fullscreen_exit_24),
+                                        contentDescription = "全屏"
+                                    )
+                                }
                             }
                         }
                     }

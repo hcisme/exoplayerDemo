@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -65,6 +66,7 @@ fun Player(
     title: String,
     autoPlay: Boolean = false,
     isShowBulletChat: Boolean = false,
+    bulletChatList: List<Danmu> = listOf(),
     onClickBackButton: () -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -79,6 +81,7 @@ fun Player(
     var exoPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     var firstLoad = remember { true }
     var isLandScreen by remember { mutableStateOf(activity.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE) }
+    var bulletChatVisible by remember { mutableStateOf(isShowBulletChat) }
     var isSeeking by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(true) }
     var isPlaying by remember { mutableStateOf(autoPlay) }
@@ -187,6 +190,7 @@ fun Player(
         modifier = Modifier
             .background(Color.Black)
             .then(if (isLandScreen) Modifier.fillMaxSize() else Modifier.aspectRatio(16 / 9f))
+            .clipToBounds()
     ) {
         if (exoPlayer != null) {
             AndroidView(
@@ -252,6 +256,7 @@ fun Player(
         // 播放控件
         PlayerController(
             isPlaying = isPlaying,
+            isShowBulletChat = bulletChatVisible,
             title = title,
             isLandscape = isLandScreen,
             currentTimePosition = currentTimePosition,
@@ -284,6 +289,9 @@ fun Player(
                     enterFullscreen()
                 }
             },
+            onClickDanmuIcon = {
+                bulletChatVisible = !bulletChatVisible
+            },
             onClick = {
                 danmuMenuTrigger += 1
             },
@@ -301,9 +309,9 @@ fun Player(
         )
 
         // 弹幕
-        if (isShowBulletChat) {
+        if (bulletChatVisible) {
             BulletChat(
-                bulletChatList = danmuList,
+                bulletChatList = bulletChatList,
                 isPlaying = isPlaying,
                 currentPosition = currentTimePosition.toLong(),
                 trigger = danmuMenuTrigger,
