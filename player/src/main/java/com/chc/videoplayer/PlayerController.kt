@@ -11,9 +11,10 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -69,7 +70,7 @@ fun PlayerController(
     onLongClick: (() -> Unit)? = null,
     onLongClickEnd: (() -> Unit)? = null,
     onListenerControllerVisible: ((Boolean) -> Unit)? = null,
-    centerAreaBox: @Composable (RowScope.() -> Unit) = {}
+    danmuContent: @Composable (BoxScope.() -> Unit)? = null
 ) {
     val coroutineScope = rememberCoroutineScope()
     var isShowController by remember { mutableStateOf(true) }
@@ -99,7 +100,7 @@ fun PlayerController(
     }
 
     CompositionLocalProvider(LocalContentColor provides Color.White) {
-        Column(
+        Box(
             modifier = modifier
                 .fillMaxSize()
                 .combinedClickable(
@@ -122,8 +123,11 @@ fun PlayerController(
                     onClick?.invoke()
                 }
         ) {
+            danmuContent?.let { it() }
+
             // 顶部控制栏
             AnimatedVisibility(
+                modifier = Modifier.align(Alignment.TopCenter),
                 visible = isShowController,
                 enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
                 exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut()
@@ -149,17 +153,9 @@ fun PlayerController(
                 }
             }
 
-            // 中间区域
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(horizontal = if (isLandscape) 56.dp else 4.dp),
-            ) {
-                if (isShowController) centerAreaBox()
-            }
-
             // 底部控制栏
             AnimatedVisibility(
+                modifier = Modifier.align(Alignment.BottomCenter),
                 visible = isShowController,
                 enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
                 exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
